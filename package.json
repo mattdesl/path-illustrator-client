@@ -1,0 +1,45 @@
+{
+  "name": "etch-draw-paths",
+  "version": "1.0.0",
+  "description": "draws polygons and paths with bezier control points",
+  "main": "index.js",
+  "license": "MIT",
+  "author": {
+    "name": "Matt DesLauriers",
+    "email": "dave.des@gmail.com"
+  },
+  "dependencies": {
+    "events": "^1.0.2",
+    "inherits": "^2.0.1"
+  },
+  "devDependencies": {
+    "canvas-testbed": "^0.4.0",
+    "dom-events": "^0.1.1",
+    "tape": "~2.13.2",
+    "vectors": "^0.1.0"
+  },
+  "scripts": {
+    "test": "node test.js"
+  },
+  "testling": {
+    "files": "test.js",
+    "browsers": [
+      "ie/6..latest",
+      "chrome/22..latest",
+      "firefox/16..latest",
+      "safari/latest",
+      "opera/11.0..latest",
+      "iphone/6",
+      "ipad/6",
+      "android-browser/latest"
+    ]
+  },
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/mattdesl/etch-draw-paths.git"
+  },
+  "homepage": "https://github.com/mattdesl/etch-draw-paths",
+  "bugs": {
+    "url": "https://github.com/mattdesl/etch-draw-paths/issues"
+  }
+}

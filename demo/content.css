@@ -1,0 +1,11 @@
+body {
+	font-family: 'Lato', 'Helvetica', sans-serif;
+	font-size: 14px;
+}
+
+.info {
+	padding: 5px;
+}
+p {
+	margin: 0;
+}

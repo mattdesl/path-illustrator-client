@@ -24,7 +24,7 @@
   },
   "scripts": {
     "test": "node test.js",
-    "build": "browserify demo/index.js -o demo/bundle/bundle.js"
+    "build": "browserify demo/index.js | uglifyjs > demo/bundle/bundle.js"
   },
   "testling": {
     "files": "test.js",

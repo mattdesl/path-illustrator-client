@@ -23,7 +23,8 @@
     "vectors": "^0.1.0"
   },
   "scripts": {
-    "test": "node test.js"
+    "test": "node test.js",
+    "build": "browserify demo/index.js -o demo/bundle/bundle.js"
   },
   "testling": {
     "files": "test.js",

@@ -6,10 +6,11 @@
 
 # work in progress
 
-Eventually this may or may not turn into a tool for web animations and rich UI. The goals:
+Proof of concept. Eventually this may or may not turn into a tool for web animations and rich UI. The goals:
 
 - intuitive photoshop-like path and curve editing
 - minimal set of SVG features (fills, strokes, gradients)
+- masks
 - timeline with keyframes for animating points
 - export to JSON 
 

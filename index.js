@@ -1,6 +1,9 @@
 var EventEmitter = require('events').EventEmitter
 var inherits = require('inherits')
 var Point = require('./point')
+var Renderer = require('./renderer')
+
+var pointAlongPath = require('./point-along-path')
 
 var dist = require('vectors/dist')(2)
 var sub = require('vectors/sub')(2)
@@ -8,6 +11,8 @@ var norm = require('vectors/normalize')(2)
 var add = require('vectors/add')(2)
 var copy = require('vectors/copy')(2)
 var mult = require('vectors/mult')(2)
+
+
 
 function DrawPaths(opt) {
     if (!(this instanceof DrawPaths))
@@ -17,9 +22,22 @@ function DrawPaths(opt) {
 
     this.points = []
     this.activePoint = null
+    this.hoverDistance = 10
+    this.renderer = new Renderer(opt)
+    this.showAllControls = false
+    this.drawing = true
+    this.pointOnPathIndex = -1
+    this.pointOnPath = [0, 0]
+    this.allowAdd = true
+    this.allowRemove = true
 
-    this.on('place', function(e) {
-        this.points.push(new Point(e.position))
+    this.on('add-point', function(e) {
+        var point = new Point(e.position)
+        if (typeof e.index === 'number') {
+            this.points.splice(e.index, 0, point)
+            this._updateActive(e)
+        } else
+            this.points.push(point)
     })
 
     this.on('adjust-curve', function(e) {
@@ -43,12 +61,6 @@ function DrawPaths(opt) {
             throw new Error('unsupported curve order '+e.point.controls.length)
     })
 
-    this.hoverDistance = 10
-    this.pointRadius = 3
-    this.controlRadius = 2
-    this.controlAlpha = 0.2
-    this.controlStyle = 'blue'
-    this.pointStyle = '#2d2d2d'
 
     // this.on('mouseup', this._updateActive.bind(this))
     this.on('mousemove', this._updateActive.bind(this))
@@ -58,6 +70,17 @@ function DrawPaths(opt) {
             return
         this.closed = true
     }.bind(this))
+
+    this.on('move-shape', function(e) {
+        var point = this.activePoint
+        if (!point || point.isControl)
+            return
+        var old = point.position
+        var translate = sub( copy(e.position), old )
+        this.points.forEach(function(p) {
+            translatePoint(p, translate)
+        })
+    })
 
     this.on('move-active', function(e) {
         var point = this.activePoint
@@ -69,15 +92,32 @@ function DrawPaths(opt) {
         } else {
             var old = point.position
 
-            point.position = e.position
-
             var translate = sub( copy(e.position), old )
-            for (var j=0; j<point.controls.length; j++) {
-                var c = point.controls[j]
-                add( c, translate )
-            }
+            translatePoint(point, translate)
         }
     })
+
+    this.on('remove-point', function(e) {
+        if (!e.point)
+            return
+        var idx = this.points.indexOf(e.point)
+        if (idx===-1)
+            return
+
+        this.points.splice(idx, 1)
+        if (this.activePoint === e.point)
+            this.activePoint = null
+    })
+}
+
+
+function translatePoint(point, amount) {
+    add( point.position, amount )
+
+    for (var j=0; j<point.controls.length; j++) {
+        var c = point.controls[j]
+        add( c, amount )
+    }
 }
 
 inherits(DrawPaths, EventEmitter)
@@ -89,6 +129,22 @@ DrawPaths.prototype._updateActive = function(e) {
 
     if (!closest) {
         this.activePoint = this.nearestControl(e.position, this.hoverDistance)
+        if (this.activePoint && !this.controlsVisible(this.activePoint.pointIndex))
+            this.activePoint = null
+    }
+
+    this.pointOnPath = [0, 0]
+    //determine the mouse over point
+    this.pointOnPathIndex = pointAlongPath(this.points, e.position, this.hoverDistance, this.pointOnPath)
+
+    if (this.pointOnPathIndex === -1) 
+        this.pointOnPath = null
+
+    if (this.activePoint && this.pointOnPath
+            && (this.pointOnPath[0] === this.activePoint.position[0] 
+            && this.pointOnPath[1] === this.activePoint.position[1])) {
+        this.pointOnPath = null
+        this.pointOnPathIndex = -1
     }
 }
 
@@ -121,6 +177,7 @@ DrawPaths.prototype.nearestControl = function(position, threshold) {
     var associatedPoint = null
     var minDist = Number.MAX_VALUE
     var controlIndex = -1
+    var pointIndex = -1
     for (var i=0; i<this.points.length; i++) {
         var p = this.points[i]
         for (var j=0; j<p.controls.length; j++) {
@@ -129,6 +186,7 @@ DrawPaths.prototype.nearestControl = function(position, threshold) {
             if (distance < minDist && distance < threshold) {
                 nearest = p.controls[j]
                 associatedPoint = p
+                pointIndex = i
                 controlIndex = j
                 minDist = distance
             }
@@ -139,6 +197,7 @@ DrawPaths.prototype.nearestControl = function(position, threshold) {
             isControl: true,
             position: nearest, 
             index: controlIndex, 
+            pointIndex: pointIndex,
             parent: associatedPoint 
         } : null
 }
@@ -150,133 +209,36 @@ DrawPaths.prototype.firstPoint = function() {
     return this.points[0]
 }
 
-DrawPaths.prototype.drawPath = function(ctx, path) {
-    var points = path.points,
-        closed = path.closed
+DrawPaths.prototype.controlsVisible = function(pointIndex) {
+    if (!this.drawing)
+        return false
 
-    for (var i=0; i<points.length; i++) {
-        var p = points[i]
-        var pos = p.position
-        
-        if (i===0) 
-            ctx.moveTo(pos[0], pos[1])
+    var point = this.points[pointIndex]
+    if (!point || !point.curve)
+        return false
 
-        var last = i>0 ? points[i-1] : null
-        if (i===0 && points.length>1 && closed) { //if we are closed and at start
-            var last = points[points.length-1]
-            ctx.moveTo(last.position[0], last.position[1])
-        }
+    //if it's being drawn
+    if (pointIndex === this.points.length-1)
+        return true
 
-        //if we need a bezier order curve
-        if (last && last.curve && p.curve) {
-            var c1 = last.controls[1],
-                c2 = p.controls[0]
-            ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], pos[0], pos[1])
-        }
-        else if (last && last.curve) {
-            var c1 = last.controls[1]
-            ctx.quadraticCurveTo(c1[0], c1[1], pos[0], pos[1])
-        }
-        else if (p.curve && i>0) {
-            var c1 = p.controls[0]
-            ctx.quadraticCurveTo(c1[0], c1[1], pos[0], pos[1])
-        }
-        else
-            ctx.lineTo(pos[0], pos[1])
-    }
-}
+    //if we are highlighting it..
+    var active = this.activePoint
+    if (point === active)
+        return true
 
-DrawPaths.prototype.drawEditingPath = function(ctx, path) {
-    var points = path.points,
-        closed = path.closed
-
-    var radius = this.pointRadius,
-        controlStyle = 'blue',
-        controlAlpha = this.controlAlpha
-        pointStyle = '#2d2d2d'
-
-    if (closed) {
-        ctx.beginPath()
-        this.drawPath(ctx, path)
-        ctx.globalAlpha = 0.2
-        ctx.fillStyle = pointStyle
-        ctx.fill()
-    }
-
-    //draw control points
-    ctx.beginPath()
-    for (var i=0; i<points.length; i++) {
-        if (!points[i].curve)
-            continue
-
-        var pos = points[i].position
-        var controls = points[i].controls
-        for (var j=0; j<controls.length; j++) {
-            var p = controls[j]
-            ctx.moveTo(pos[0], pos[1])
-            ctx.lineTo(p[0], p[1])
-        }
-    }
-    ctx.globalAlpha = controlAlpha
-    ctx.lineWidth = 1
-    ctx.strokeStyle = controlStyle
-    ctx.stroke()
-
-    //draw control points
-    ctx.beginPath()
-    for (var i=0; i<points.length; i++) {
-        if (!points[i].curve)
-            continue
-
-        var controls = points[i].controls
-        for (var j=0; j<controls.length; j++) {
-            var p = controls[j]
-            ctx.moveTo(p[0], p[1])
-            ctx.arc(p[0], p[1], radius, 0, Math.PI*2, false)    
-        }
-    }
-    ctx.globalAlpha = controlAlpha
-    ctx.fillStyle = controlStyle
-    ctx.fill()
-
-
-    //draw lines
-    ctx.beginPath()
-    this.drawPath(ctx, path)
-    ctx.lineWidth = 2
-    ctx.globalAlpha = 0.5
-    ctx.strokeStyle = pointStyle
-    ctx.stroke()
-
-    //draw points
-    ctx.beginPath()
-    for (var i=0; i<points.length; i++) {
-        var p = points[i].position
-        ctx.moveTo(p[0], p[1])
-        ctx.arc(p[0], p[1], radius, 0, Math.PI*2, false)
-    }
-    ctx.globalAlpha = 1
-    ctx.fillStyle = pointStyle
-    ctx.fill()
-
+    //or if all controls are visible
+    return this.showAllControls
 }
 
 DrawPaths.prototype.draw = function(ctx) {
-    this.drawEditingPath(ctx, { points: this.points, closed: this.closed })
-
-    if (this.activePoint) {
-        var pos = this.activePoint.position
-        var isControl = this.activePoint.isControl
-
-        var radius = isControl ? this.controlRadius : this.pointRadius
-        ctx.globalAlpha = isControl ? this.controlAlpha : 0.5
-        ctx.beginPath()
-        ctx.lineWidth = 2
-        ctx.strokeStyle = isControl ? this.controlStyle : this.pointStyle
-        ctx.arc(pos[0], pos[1], radius+4, 0, Math.PI*2, false)
-        ctx.stroke()
-    }
+    var path = { points: this.points, closed: this.closed }
+    this.renderer.draw(this, ctx, path, this.activePoint)
 }
 
+DrawPaths.prototype.clear = function() {
+    this.points.length = 0
+    this.closed = false
+    this.activePoint = null
+}
 
 module.exports = DrawPaths

@@ -11,7 +11,9 @@
   "dependencies": {
     "events": "^1.0.2",
     "inherits": "^2.0.1",
-    "vectors": "^0.1.0"
+    "line-circle-collision": "^1.0.4",
+    "vectors": "^0.1.0",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "brfs": "^1.2.0",
@@ -24,7 +26,7 @@
   },
   "scripts": {
     "test": "node test.js",
-    "build": "browserify demo/index.js | uglifyjs > demo/bundle/bundle.js"
+    "build": "mkdir -p demo/bundle && browserify demo/index.js | uglifyjs > demo/bundle/bundle.js"
   },
   "testling": {
     "files": "test.js",

@@ -3,6 +3,12 @@ body {
 	font-size: 14px;
 }
 
+canvas { 
+	position: absolute;
+	top: 0;
+	left: 0;
+	
+}
 .info {
 	padding: 5px;
 }

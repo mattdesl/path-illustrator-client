@@ -11,7 +11,9 @@
   "dependencies": {
     "events": "^1.0.2",
     "inherits": "^2.0.1",
-    "vectors": "^0.1.0"
+    "line-circle-collision": "^1.0.4",
+    "vectors": "^0.1.0",
+    "xtend": "^4.0.0"
   },
   "devDependencies": {
     "brfs": "^1.2.0",

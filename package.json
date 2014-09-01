@@ -26,7 +26,7 @@
   },
   "scripts": {
     "test": "node test.js",
-    "build": "browserify demo/index.js | uglifyjs > demo/bundle/bundle.js"
+    "build": "mkdir -p demo/bundle && browserify demo/index.js | uglifyjs > demo/bundle/bundle.js"
   },
   "testling": {
     "files": "test.js",

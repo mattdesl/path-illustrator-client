@@ -1,4 +1,5 @@
 var dist = require('vectors/dist')(2)
+var copy = require('vectors/copy')(2)
 
 function Renderer(options) {
     this.pointRadius = 3
@@ -22,22 +23,31 @@ Renderer.prototype.drawPath = function(parent, ctx, path) {
             ctx.moveTo(pos[0], pos[1])
 
         var last = i>0 ? points[i-1] : null
+        var lastCurve = last && last.curve
+        var curve = p.curve
+
         if (i===0 && points.length>1 && closed) { //if we are closed and at start
-            var last = points[points.length-1]
-            ctx.moveTo(last.position[0], last.position[1])
+            last = points[points.length-1]
+            lastCurve = last.curve
+            ctx.moveTo(last.position[0], last.position[1]) 
+            if (!lastCurve && p.curve) {
+                var c1 = p.controls[0]
+                ctx.quadraticCurveTo(c1[0], c1[1], pos[0], pos[1])
+            }
         }
 
+
         //if we need a bezier order curve
-        if (last && last.curve && p.curve) {
+        if (last && lastCurve && curve) {
             var c1 = last.controls[1],
                 c2 = p.controls[0]
             ctx.bezierCurveTo(c1[0], c1[1], c2[0], c2[1], pos[0], pos[1])
         }
-        else if (last && last.curve) {
+        else if (last && lastCurve) {
             var c1 = last.controls[1]
             ctx.quadraticCurveTo(c1[0], c1[1], pos[0], pos[1])
         }
-        else if (p.curve && i>0) {
+        else if (curve && i>0) {
             var c1 = p.controls[0]
             ctx.quadraticCurveTo(c1[0], c1[1], pos[0], pos[1])
         }
@@ -65,9 +75,9 @@ Renderer.prototype.drawHighlight = function(parent, ctx, active) {
     if (parent.pointOnPath) {
         var pos = parent.pointOnPath
         ctx.beginPath()
-        ctx.globalAlpha = 1
+        ctx.globalAlpha = 0.5
         ctx.strokeStyle = this.pointStyle
-        ctx.arc(pos[0], pos[1], this.controlRadius, 0, Math.PI*2, false)
+        ctx.arc(pos[0], pos[1], this.pointRadius, 0, Math.PI*2, false)
         ctx.stroke()
     }
 }

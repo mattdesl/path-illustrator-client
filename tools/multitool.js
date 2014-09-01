@@ -32,6 +32,12 @@ module.exports = function(opt) {
             var addLinePoint = paths.pointOnPath && paths.allowAdd
                             && !paths.activePoint
 
+            if (!moveKey && paths.drawing 
+                && paths.activePoint && !paths.activePoint.isControl
+                && !paths.closed
+                && paths.activePoint === paths.points[0]) {
+                shouldClose = true
+            }
 
             if (!paths.drawing && moveKey) {
                 dragStart = true

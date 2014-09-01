@@ -21,13 +21,15 @@ The ultimate goal is to bring [motion graphics](https://www.youtube.com/watch?v=
 Some things here will probably never make it into the tool. This is some stuff that designers will want or expect:
 
 - path editing
-  - add / remove points along line
+  - ~~add / remove points along line~~ **done**
+  - add points along bezier curve
   - select, move multiple points
   - close the path when clicking last point
   - arrow keys nudge by 1px and 10px
-  - hide control points to avoid clutter
+  - ~~hide control points to avoid clutter~~ **done**
   - smarter selection of control points like in PS
   - lock control points until they are moved separately
+- undo / redo
 - transforms
   - scale / skew / rotate / flip
 - viewport

@@ -49,11 +49,22 @@ Some things here will probably never make it into the tool. This is some stuff t
 - dev tools
   - code fill: enter a function for procedurally filling a scene with points
 
-## etches
+
+# end goal
+
+### etches
 
 The end goal of the project is to create a reusable system for path animations. 
 
 An "etch" contains the saved state of the path client, complete with animations and stlyes. Etches can be installed locally or published to npm. For example, users can enter "etch-hamburger-button" or "mattdesl/etch-radial-preloader" (for GitHub repos) to get certain paths and animations. 
+
+### etch styling
+
+Reusable components are not very useful unless we can provide styles for application-specific colors/animations/etc. "etch designers" (those developing the etches) will expose certain "attributes" that others can tweak. Kind of like public members in Unity. 
+
+### etches are program and renderer agnostic
+
+Really important is that the etch is just a list of keyframes with path/style/color/attribute. It has no ties to HTML5 canvas or the path client that made it. 
 
 ## Usage
 

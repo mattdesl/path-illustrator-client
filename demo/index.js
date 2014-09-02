@@ -36,6 +36,8 @@ function start(ctx, width, height) {
     })
     client.tool = tools[0]
 
+
+
     document.body.appendChild( domify(content) )
     events.on(window, 'keydown', function(ev) {
         var kc = ev.which||ev.keyCode
@@ -53,6 +55,17 @@ function start(ctx, width, height) {
             paths.clear()
         } else if (chr === 'm') {
             paths.drawing = !paths.drawing
+            paths.allowAdd = paths.drawing
+            paths.allowRemove = paths.drawing
+            paths.renderer.showPointOnPath = paths.drawing
+        } else if (chr === 'n') {
+            client.tool.moveDirect = !client.tool.moveDirect
+        } 
+
+        else if (chr === 'q') {
+            client.undo()
+        } else if (chr === 'w') {
+            client.redo()
         }
     })
 

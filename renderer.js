@@ -1,14 +1,28 @@
 var dist = require('vectors/dist')(2)
 var copy = require('vectors/copy')(2)
 
-function Renderer(options) {
-    this.pointRadius = 3
-    this.controlRadius = 2
-    this.controlAlpha = 0.2
-    this.controlStyle = 'blue'
-    this.pointStyle = '#2d2d2d'
-    this.drawingPointStyle = 'white'
-    this.showControls = true
+function Renderer(opt) {
+    opt = opt||{}
+    this.showPointOnPath = true
+
+    this.pointRadius = typeof opt.pointRadius === 'number' ? opt.pointRadius : 3
+    this.controlRadius = typeof opt.controlRadius === 'number' ? opt.controlRadius : 2
+    this.controlAlpha = typeof opt.controlAlpha === 'number' ? opt.controlAlpha : 0.2
+    this.controlStyle = opt.controlStyle || 'blue'
+    this.pointStyle = opt.pointStyle || '#2d2d2d'
+    this.drawingPointStyle = opt.drawingPointStyle || 'white'
+    this.highlightAlpha = typeof opt.highlightAlpha === 'number' ? opt.highlightAlpha : 0.5
+
+    this.stroke = opt.stroke !== false
+    this.fill = opt.fill !== false
+    this.showEditingPoints = opt.showEditingPoints !== false
+
+    this.controlLineWidth = typeof opt.controlLineWidth === 'number' ? opt.controlLineWidth : 1
+    this.lineWidth = typeof opt.lineWidth === 'number' ? opt.lineWidth : 2
+    this.strokeStyle = opt.strokeStyle || this.pointStyle
+    this.strokeAlpha = typeof opt.strokeAlpha === 'number' ? opt.strokeAlpha : 0.5
+    this.fillStyle = opt.fillStyle || this.pointStyle
+    this.fillAlpha = typeof opt.fillAlpha === 'number' ? opt.fillAlpha : 0.5
 }
 
 Renderer.prototype.drawPath = function(parent, ctx, path) {
@@ -56,26 +70,36 @@ Renderer.prototype.drawPath = function(parent, ctx, path) {
     }
 }
 
-Renderer.prototype.drawHighlight = function(parent, ctx, active) {
+Renderer.prototype.drawHighlight = function(parent, ctx, path, active) {
     if (active) {
         var pos = active.position
         var isControl = active.isControl
 
         if (isControl && !parent.controlsVisible(active.pointIndex))
             return
+        var isClosing = !isControl 
+                && path.points.length > 2
+                && active === path.points[0]
+                && !parent.closed
 
         var radius = isControl ? this.controlRadius : this.pointRadius
-        ctx.globalAlpha = isControl ? this.controlAlpha : 0.5
+        ctx.globalAlpha = isControl ? this.controlAlpha : this.highlightAlpha
         ctx.beginPath()
-        ctx.lineWidth = 2
-        ctx.fillStyle = isControl ? this.controlStyle : this.pointStyle
+        ctx.lineWidth = this.lineWidth
         ctx.arc(pos[0], pos[1], radius+4, 0, Math.PI*2, false)
-        ctx.fill()
+
+        if (isClosing) {
+            ctx.strokeStyle = this.pointStyle
+            ctx.stroke()
+        } else {
+            ctx.fillStyle = isControl ? this.controlStyle : this.pointStyle
+            ctx.fill()
+        }
     }
-    if (parent.pointOnPath) {
+    if (parent.pointOnPath && this.showPointOnPath) {
         var pos = parent.pointOnPath
         ctx.beginPath()
-        ctx.globalAlpha = 0.5
+        ctx.globalAlpha = this.highlightAlpha
         ctx.strokeStyle = this.pointStyle
         ctx.arc(pos[0], pos[1], this.pointRadius, 0, Math.PI*2, false)
         ctx.stroke()
@@ -87,9 +111,9 @@ Renderer.prototype.drawControlPoints = function(parent, ctx, path, active) {
         closed = path.closed
 
     var radius = this.pointRadius,
-        controlStyle = 'blue',
-        controlAlpha = this.controlAlpha
-        pointStyle = '#2d2d2d'
+        controlStyle = this.controlStyle,
+        controlAlpha = this.controlAlpha,
+        pointStyle = this.pointStyle
 
     //draw control points
     ctx.beginPath()
@@ -108,7 +132,7 @@ Renderer.prototype.drawControlPoints = function(parent, ctx, path, active) {
         }
     }
     ctx.globalAlpha = controlAlpha
-    ctx.lineWidth = 1
+    ctx.lineWidth = this.controlLineWidth
     ctx.strokeStyle = controlStyle
     ctx.stroke()
 
@@ -137,26 +161,19 @@ Renderer.prototype.drawEditingPath = function(parent, ctx, path, active) {
         closed = path.closed
 
     var radius = this.pointRadius,
-        controlStyle = 'blue',
+        controlStyle = this.controlStyle,
         controlAlpha = this.controlAlpha
-        pointStyle = '#2d2d2d'
+        pointStyle = this.pointStyle
 
-    if (closed) {
-        ctx.beginPath()
-        this.drawPath(parent, ctx, path)
-        ctx.globalAlpha = 0.2
-        ctx.fillStyle = pointStyle
-        ctx.fill()
-    }
 
     this.drawControlPoints(parent, ctx, path, active)
 
     //draw lines
     ctx.beginPath()
     this.drawPath(parent, ctx, path)
-    ctx.lineWidth = 2
-    ctx.globalAlpha = 0.5
-    ctx.strokeStyle = pointStyle
+    ctx.lineWidth = this.lineWidth
+    ctx.globalAlpha = this.strokeAlpha
+    ctx.strokeStyle = this.strokeStyle
     ctx.stroke()
 
     //draw points
@@ -184,6 +201,7 @@ Renderer.prototype.drawEditingPath = function(parent, ctx, path, active) {
             ctx.strokeStyle = pointStyle
             ctx.fillStyle = this.drawingPointStyle
             ctx.fill()
+            ctx.lineWidth = 1
             ctx.stroke()
         } else {
             ctx.fillStyle = pointStyle
@@ -194,10 +212,29 @@ Renderer.prototype.drawEditingPath = function(parent, ctx, path, active) {
 }
 
 Renderer.prototype.draw = function(parent, ctx, path, active) {
-    ctx.lineJoin = 'round'
-    ctx.lineCap = 'square'
-    this.drawEditingPath(parent, ctx, path, active)
-    this.drawHighlight(parent, ctx, active)
+    ctx.globalAlpha = 1
+    if (path.closed && (this.fill||this.stroke)) {
+        ctx.beginPath()
+        this.drawPath(parent, ctx, path)
+        ctx.globalAlpha = this.fillAlpha
+        ctx.fillStyle = this.fillStyle
+
+        if (this.fill) {
+            ctx.fillStyle = this.fillStyle
+            ctx.globalAlpha = this.fillAlpha
+            ctx.fill()
+        }
+        if (this.stroke) {
+            ctx.globalAlpha = this.strokeAlpha
+            ctx.strokeStyle = this.strokeStyle
+            ctx.stroke()
+        }
+    }
+
+    if (this.showEditingPoints) {
+        this.drawEditingPath(parent, ctx, path, active)
+        this.drawHighlight(parent, ctx, path, active)
+    }
 }
 
 module.exports = Renderer

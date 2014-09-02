@@ -4,6 +4,7 @@ var Point = require('./point')
 var Renderer = require('./renderer')
 
 var pointAlongPath = require('./point-along-path')
+var deepcopy = require('deepcopy')
 
 var dist = require('vectors/dist')(2)
 var sub = require('vectors/sub')(2)
@@ -12,33 +13,28 @@ var add = require('vectors/add')(2)
 var copy = require('vectors/copy')(2)
 var mult = require('vectors/mult')(2)
 
-
-
 function DrawPaths(opt) {
     if (!(this instanceof DrawPaths))
         return new DrawPaths(opt)
     EventEmitter.call(this)
     opt = opt||{}
 
-    this.points = []
-    this.activePoint = null
-    this.hoverDistance = 10
     this.renderer = new Renderer(opt)
-    this.showAllControls = false
-    this.drawing = true
+    this.points = opt.points || []
+    this.activePoint = null
+    this.pointEditDistance = typeof opt.pointEditDistance === 'number' ? opt.pointEditDistance : 10
+    this.showAllControls = opt.showAllControls
+    this.drawing = opt.drawing !== false
     this.pointOnPathIndex = -1
-    this.pointOnPath = [0, 0]
-    this.allowAdd = true
-    this.allowRemove = true
+    this.pointOnPath = null
+    this.allowAdd = opt.allowAdd !== false
+    this.allowRemove = opt.allowRemove !== false
+    this.editable = opt.editable !== false
+    this.closed = opt.closed || false
 
     this.on('add-point', function(e) {
-        var point = new Point(e.position)
-        if (typeof e.index === 'number') {
-            this.points.splice(e.index, 0, point)
-            this._updateActive(e)
-        } else
-            this.points.push(point)
-    })
+        this.addPoint(e)
+    }.bind(this))
 
     this.on('adjust-curve', function(e) {
         var len = dist(e.position, e.point.position)
@@ -59,16 +55,22 @@ function DrawPaths(opt) {
             e.point.controls[0] = dir
         } else 
             throw new Error('unsupported curve order '+e.point.controls.length)
+        this.emit('change')
     })
 
-
-    // this.on('mouseup', this._updateActive.bind(this))
+    this.on('mouseup', this._updateActive.bind(this))
     this.on('mousemove', this._updateActive.bind(this))
 
-    this.on('close-path', function() {
+    this.on('close-path', function(e) {
         if (this.points.length<=1)
             return
         this.closed = true
+        this.emit('change')
+        if (!e || !e.adjusting) {
+            this.emit('finish-change', {
+                type: 'close-path'
+            })
+        }
     }.bind(this))
 
     this.on('move-shape', function(e) {
@@ -80,7 +82,8 @@ function DrawPaths(opt) {
         this.points.forEach(function(p) {
             translatePoint(p, translate)
         })
-    })
+        this.emit('change')
+    }.bind(this))
 
     this.on('move-active', function(e) {
         var point = this.activePoint
@@ -95,7 +98,8 @@ function DrawPaths(opt) {
             var translate = sub( copy(e.position), old )
             translatePoint(point, translate)
         }
-    })
+        this.emit('change')
+    }.bind(this))
 
     this.on('remove-point', function(e) {
         if (!e.point)
@@ -107,7 +111,16 @@ function DrawPaths(opt) {
         this.points.splice(idx, 1)
         if (this.activePoint === e.point)
             this.activePoint = null
-    })
+        this.emit('change')
+        this.emit('finish-change', {
+            type: 'remove-point'
+        })
+
+        if (this.points.length <= 2)
+            this.closed = false
+    }.bind(this))
+
+
 }
 
 
@@ -122,20 +135,43 @@ function translatePoint(point, amount) {
 
 inherits(DrawPaths, EventEmitter)
 
+DrawPaths.prototype.addPoint = function(e) {
+    var point = new Point(e.position)
+    if (typeof e.index === 'number') {
+        this.points.splice(e.index, 0, point)
+        this._updateActive(e)
+    } else
+        this.points.push(point)
+    this.emit('change')
+    if (!e.adjusting) {
+        this.emit('finish-change', {
+            type: 'add-point'
+        })
+    }
+}
+
 DrawPaths.prototype._updateActive = function(e) {
+    if (!e) {
+        this.activePoint = null
+        this.pointOnPath = null
+        this.pointOnPathIndex = null
+        return
+    }
+
     //point takes precedence
-    var closest = this.nearestPoint(e.position, this.hoverDistance)
+    var closest = this.nearestPoint(e.position, this.pointEditDistance)
     this.activePoint = closest
 
     if (!closest) {
-        this.activePoint = this.nearestControl(e.position, this.hoverDistance)
+        this.activePoint = this.nearestControl(e.position, this.pointEditDistance)
         if (this.activePoint && !this.controlsVisible(this.activePoint.pointIndex))
             this.activePoint = null
     }
 
     this.pointOnPath = [0, 0]
+
     //determine the mouse over point
-    this.pointOnPathIndex = pointAlongPath(this.points, this.closed, e.position, this.hoverDistance, this.pointOnPath)
+    this.pointOnPathIndex = pointAlongPath(this.points, this.closed, e.position, this.pointEditDistance, this.pointOnPath)
 
     if (this.pointOnPathIndex === -1) 
         this.pointOnPath = null
@@ -216,7 +252,7 @@ DrawPaths.prototype.controlsVisible = function(pointIndex) {
         return false
 
     //if it's being drawn
-    if (pointIndex === this.points.length-1)
+    if (pointIndex === this.points.length-1 && !this.closed)
         return true
 
     //if we are highlighting it..
@@ -228,9 +264,20 @@ DrawPaths.prototype.controlsVisible = function(pointIndex) {
     return this.showAllControls
 }
 
+DrawPaths.prototype.state = function(state) {
+    if (state) { 
+        //could iterate through current state instead of copying..
+        state = deepcopy(state)
+        this.points = state.points
+        this.closed = state.closed
+        this._updateActive()
+    } else 
+        return { points: this.points, closed: this.closed }
+}
+
 DrawPaths.prototype.draw = function(ctx) {
-    var path = { points: this.points, closed: this.closed }
-    this.renderer.draw(this, ctx, path, this.activePoint)
+    this.renderer.showPointOnPath = this.allowAdd
+    this.renderer.draw(this, ctx, this.state(), this.activePoint)
 }
 
 DrawPaths.prototype.clear = function() {

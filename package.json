@@ -1,6 +1,6 @@
 {
-  "name": "etch-draw-paths",
-  "version": "1.0.0",
+  "name": "path-illustrator-client",
+  "version": "0.0.0",
   "description": "draws polygons and paths with bezier control points",
   "main": "index.js",
   "license": "MIT",
@@ -45,11 +45,11 @@
   },
   "repository": {
     "type": "git",
-    "url": "git://github.com/mattdesl/etch-draw-paths.git"
+    "url": "git://github.com/mattdesl/path-illustrator-client.git"
   },
-  "homepage": "https://github.com/mattdesl/etch-draw-paths",
+  "homepage": "https://github.com/mattdesl/path-illustrator-client",
   "bugs": {
-    "url": "https://github.com/mattdesl/etch-draw-paths/issues"
+    "url": "https://github.com/mattdesl/path-illustrator-client/issues"
   },
   "browserify": {
     "transform": [

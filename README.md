@@ -1,8 +1,10 @@
-[![browser support](https://ci.testling.com/mattdesl/etch-draw-paths.png)](https://ci.testling.com/mattdesl/etch-draw-paths)
+[![browser support](https://ci.testling.com/mattdesl/path-illustrator-client.png)](https://ci.testling.com/mattdesl/path-illustrator-client)
 
-# etch-draw-paths
+# path-illustrator-client
 
 [![experimental](http://badges.github.io/stability-badges/dist/experimental.svg)](http://github.com/badges/stability-badges)
+
+This makes up the internals for [path-illustrator](https://nodei.co/npm/path-illustrator-client/). You should not rely on this module directly since it is far from stable and has no guaranteed public API. Instead, use `path-illustrator` and its documented API.
 
 # work in progress
 
@@ -44,13 +46,19 @@ Some things here will probably never make it into the tool. This is some stuff t
   - ease curve editing
 - snapping
   - snap along straight edges and 45 degree angles
-- code fill
-  - e.g. to quickly fill a canvas with points randomly you could add a function
+- dev tools
+  - code fill: enter a function for procedurally filling a scene with points
+
+## etches
+
+The end goal of the project is to create a reusable system for path animations. 
+
+An "etch" contains the saved state of the path client, complete with animations and stlyes. Etches can be installed locally or published to npm. For example, users can enter "etch-hamburger-button" or "mattdesl/etch-radial-preloader" (for GitHub repos) to get certain paths and animations. 
 
 ## Usage
 
-[![NPM](https://nodei.co/npm/etch-draw-paths.png)](https://nodei.co/npm/etch-draw-paths/)
+[![NPM](https://nodei.co/npm/path-illustrator-client.png)](https://nodei.co/npm/path-illustrator-client/)
 
 ## License
 
-MIT, see [LICENSE.md](http://github.com/mattdesl/etch-draw-paths/blob/master/LICENSE.md) for details.
+MIT, see [LICENSE.md](http://github.com/mattdesl/path-illustrator-client/blob/master/LICENSE.md) for details.

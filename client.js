@@ -33,6 +33,10 @@ function PathClient(paths, opt) {
     this.resetHistory()
 }
 
+PathClient.prototype.clear = function() {
+    this.paths.emit('clear-path')
+}
+
 PathClient.prototype._pushHistory = function(e) {
     var type = ''
     if (e)

@@ -121,6 +121,15 @@ function DrawPaths(opt) {
     }.bind(this))
 
 
+    this.on('clear-path', function(e) {
+        this.clear()
+        
+        this.emit('change')
+        this.emit('finish-change', {
+            type: 'clear-path'
+        })
+    }.bind(this))
+
 }
 
 

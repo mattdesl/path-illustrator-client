@@ -135,14 +135,12 @@ DrawPaths.prototype._updateActive = function(e) {
 
     this.pointOnPath = [0, 0]
     //determine the mouse over point
-    this.pointOnPathIndex = pointAlongPath(this.points, e.position, this.hoverDistance, this.pointOnPath)
+    this.pointOnPathIndex = pointAlongPath(this.points, this.closed, e.position, this.hoverDistance, this.pointOnPath)
 
     if (this.pointOnPathIndex === -1) 
         this.pointOnPath = null
 
-    if (this.activePoint && this.pointOnPath
-            && (this.pointOnPath[0] === this.activePoint.position[0] 
-            && this.pointOnPath[1] === this.activePoint.position[1])) {
+    if (this.activePoint && this.pointOnPath) {
         this.pointOnPath = null
         this.pointOnPathIndex = -1
     }

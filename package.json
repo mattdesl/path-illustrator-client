@@ -12,7 +12,8 @@
     "deepcopy": "^0.3.3",
     "events": "^1.0.2",
     "inherits": "^2.0.1",
-    "line-circle-collision": "^1.0.4",
+    "line-circle-collision": "^1.1.0",
+    "mouse-event-offset": "^1.0.1",
     "point-circle-collision": "^1.0.0",
     "vectors": "^0.1.0",
     "xtend": "^4.0.0"
